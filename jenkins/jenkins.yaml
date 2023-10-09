@@ -1,0 +1,59 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: jenkins
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    component: cicd
+  name: jenkins
+  namespace: jenkins
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: cicd
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  template:
+    metadata:
+      name: jenkins-pod
+      labels:
+        component: cicd
+    spec:
+      # needed so jenkins can write to the volume!
+      securityContext:
+        fsGroup: 1000
+        runAsUser: 0
+      containers:
+        - image: jenkins/jenkins:latest
+          name: jenkins-container
+          ports:
+            - containerPort: 8080
+              name: jenkins-port
+      restartPolicy: Always
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jenkins-service
+  namespace: jenkins
+  labels:
+    component: cicd
+spec:
+  ports:
+    - name: jenkins-svc-port
+      protocol: TCP
+      port: 8080
+      targetPort: jenkins-port
+  selector:
+    component: cicd
+  type: NodePort
